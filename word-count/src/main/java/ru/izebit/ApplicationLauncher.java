@@ -57,14 +57,18 @@ public class ApplicationLauncher {
                     .toList();
             if (counterTypesArgs.isEmpty())
                 return List.of(CounterType.LINES, CounterType.WORDS, CounterType.BYTES);
-            else if (counterTypesArgs.size() == 1)
-                return counterTypesArgs
-                        .getFirst()
+            else if (counterTypesArgs.size() == 1) {
+                var counterTypesArg = counterTypesArgs.getFirst();
+                var counterTypes = counterTypesArg
                         .chars()
                         .skip(1)
                         .mapToObj(e -> CounterType.getType((char) e))
-                        .collect(Collectors.toList());
-            else
+                        .toList();
+                if (counterTypes.isEmpty())
+                    throw new IllegalArgumentException("there are no valid passed counter types");
+
+                return counterTypes;
+            } else
                 throw new IllegalArgumentException("there must be only one parameter with counter types");
         }
 
@@ -72,7 +76,8 @@ public class ApplicationLauncher {
             return Arrays.stream(args)
                     .filter(e -> !e.startsWith("-"))
                     .toList()
-                    .stream().findFirst();
+                    .stream()
+                    .findFirst();
         }
     }
 
@@ -85,8 +90,8 @@ public class ApplicationLauncher {
         public String toString() {
             return result
                     .stream()
-                    .map(e -> e.getValue().toString())
-                    .collect(Collectors.joining(" ", "", filePath == null ? "" : " " + filePath));
+                    .map(e -> String.format("%8s", e.getValue()))
+                    .collect(Collectors.joining("", "", filePath == null ? "" : " " + filePath));
         }
     }
 
@@ -95,9 +100,10 @@ public class ApplicationLauncher {
                 new SymbolsCounter(),
                 new WordsCounter(),
                 new LinesCounter(),
-                new BytesCounter(parameters.charset));
+                new BytesCounter(parameters.charset)
+        );
 
-        var targetCounters = readData(parameters, counters)
+        var targetCounters = handle(parameters, counters)
                 .stream()
                 .collect(Collectors.toMap(Counter::getType, Function.identity()));
 
@@ -114,8 +120,8 @@ public class ApplicationLauncher {
     }
 
     @SneakyThrows
-    private static Collection<Counter> readData(final Parameters parameters,
-                                                final Collection<Counter> counters) {
+    private static Collection<Counter> handle(final Parameters parameters,
+                                              final Collection<Counter> counters) {
         val inputStream = parameters.inputType == InputType.CONSOLE
                 ? new InputStreamReader(System.in)
                 : new FileReader(parameters.filePath, parameters.charset);
@@ -218,7 +224,7 @@ public class ApplicationLauncher {
 
     @AllArgsConstructor
     private enum CounterType {
-        BYTES('b'),
+        BYTES('c'),
         SYMBOLS('m'),
         WORDS('w'),
         LINES('l');
@@ -229,7 +235,7 @@ public class ApplicationLauncher {
             return Arrays
                     .stream(CounterType.values()).filter(e -> e.parameterName == p)
                     .findFirst()
-                    .orElse(null);
+                    .orElseThrow(() -> new IllegalArgumentException("unknown counter type: " + p));
         }
     }
 
