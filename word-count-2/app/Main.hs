@@ -5,10 +5,14 @@ import qualified Data.Text.Encoding as TSE
 import qualified Data.ByteString as B
 import Data.Text (singleton)
 import Data.Char (isSpace)
+import System.Environment (getArgs)
 
 data CounterType = BytesCounterType | SymbolsCounterType | WordsCounterType | LinesCounterType deriving (Show, Eq, Enum) 
 data Counter = SimpleCounter { getType::CounterType, getResult::Int } | 
                WordsCounter { getType::CounterType, getResult::Int, getIntemediateResult::Int, isWord::Bool }
+
+defaultCounterTypes :: [CounterType]
+defaultCounterTypes = [BytesCounterType, WordsCounterType, LinesCounterType]
 
 handleSymbol:: Char -> [Counter] -> [Counter]
 handleSymbol symbol counters = map f counters where 
@@ -41,24 +45,58 @@ handleString chars counterTypes = let
     results = map (\c -> (getType c, getResult c)) handledCounters
     in results
 
+getCounterTypesFrom :: String -> Maybe [CounterType]
+getCounterTypesFrom args = case args of 
+    ('-' : types) -> sequence $ map f types where 
+        f s = case s of 
+            'c' -> Just BytesCounterType
+            'w' -> Just WordsCounterType
+            'l' -> Just LinesCounterType
+            'm' -> Just SymbolsCounterType
+            _   -> Nothing
+    _ -> Nothing 
 
 data InputType = Console | File deriving (Enum, Eq, Show)
-data InputParamereter = InputParamereter { inputType:: InputType, filePath::Maybe String, counterTypes::[CounterType]}
-getInputParameter :: String -> Either InputParamereter String 
-getInputParameter args = do
+data InputParamereter = InputParamereter { getInputType:: InputType, getFilePath::Maybe String, getCounterTypes::[CounterType]} deriving Show
+getInputParameterFrom :: [String] -> Either InputParamereter String 
+getInputParameterFrom args = case args of 
+    [] -> Left InputParamereter { getInputType = Console, getFilePath = Nothing, getCounterTypes = defaultCounterTypes }
+    [firstArgument] -> Left inputParameter where 
+                        inputParameter = case getCounterTypesFrom firstArgument of
+                            Just counterTypes -> InputParamereter { getInputType = Console, getFilePath = Nothing, getCounterTypes = counterTypes }
+                            Nothing -> InputParamereter { getInputType = File, getFilePath = Just firstArgument, getCounterTypes = defaultCounterTypes }
+    (firstArgument : secondArgument : []) -> case getCounterTypesFrom firstArgument of
+                                                Just counterTypes -> Left InputParamereter { getInputType = File, getFilePath = Just secondArgument, getCounterTypes = counterTypes }
+                                                Nothing -> Right "the first argument must be counter types" 
+    _ -> Right "there must be not more than 2 arguments"
 
-    Right "error!"
+getInputStringFrom :: InputType -> Maybe String -> IO String
+getInputStringFrom inputType filePath = case inputType of 
+    File -> case filePath of
+        Just f -> readFile f
+        _ -> undefined
+    Console -> getContents
 
-getOutputString :: [(CounterType, Int)] -> String
-getOutputString results = let 
+
+getOutputString :: [(CounterType, Int)] -> Maybe String -> String
+-- space padding 8
+getOutputString results filePath = let 
     resultTokens = map (\pair -> (show $ fst pair) ++ " " ++ (show $ snd pair)) results
     output = foldr (\t s -> if s == "" then t else t ++ ", " ++ s) "" resultTokens
     in output
 
 
-
 main :: IO ()
 main = do 
-    content <- readFile "test.txt"
-    let results = handleString content [BytesCounterType, SymbolsCounterType, WordsCounterType, LinesCounterType]
-    putStrLn $ getOutputString results
+    args <- getArgs
+    -- let inputParameter = getInputParameterFrom args
+    inputParameter <- return $ Left InputParamereter { getInputType = File, getFilePath = Just "test.txt", getCounterTypes = [BytesCounterType, SymbolsCounterType, WordsCounterType, LinesCounterType] }
+    case inputParameter of 
+        Left InputParamereter { getInputType = inputType, getFilePath = filePath, getCounterTypes = counterTypes } -> do 
+            content <- getInputStringFrom inputType filePath
+            let results = handleString content counterTypes
+            let output = getOutputString results filePath
+            putStrLn output
+        Right error -> fail error
+    let v =  inputParameter
+    putStrLn $ show v
