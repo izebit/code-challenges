@@ -23,7 +23,8 @@ The program reads text from console if path to file isn't passed.
 ## Build
 
 ### Prerequisites:
-Before working with the project, download and install [Cabal](https://cabal.readthedocs.io/en/stable/index.html) if it's installed on your machine yet.
+Before working with the project, download and install [Cabal](https://cabal.readthedocs.io/en/stable/index.html) if it's installed on your machine yet.  
+GHC version is >= 9.8.1
 
 ### Commands:
 
