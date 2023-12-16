@@ -6,13 +6,14 @@ import qualified Data.ByteString as B
 import Data.Text (singleton)
 import Data.Char (isSpace)
 import System.Environment (getArgs)
+import Text.Printf (printf)
 
 data CounterType = BytesCounterType | SymbolsCounterType | WordsCounterType | LinesCounterType deriving (Show, Eq, Enum) 
 data Counter = SimpleCounter { getType::CounterType, getResult::Int } | 
                WordsCounter { getType::CounterType, getResult::Int, getIntemediateResult::Int, isWord::Bool }
 
 defaultCounterTypes :: [CounterType]
-defaultCounterTypes = [BytesCounterType, WordsCounterType, LinesCounterType]
+defaultCounterTypes = [LinesCounterType, WordsCounterType, BytesCounterType]
 
 handleSymbol:: Char -> [Counter] -> [Counter]
 handleSymbol symbol counters = map f counters where 
@@ -79,18 +80,17 @@ getInputStringFrom inputType filePath = case inputType of
 
 
 getOutputString :: [(CounterType, Int)] -> Maybe String -> String
--- space padding 8
 getOutputString results filePath = let 
-    resultTokens = map (\pair -> (show $ fst pair) ++ " " ++ (show $ snd pair)) results
-    output = foldr (\t s -> if s == "" then t else t ++ ", " ++ s) "" resultTokens
-    in output
+    resultTokens = map (\pair -> printf "%8d" $ snd pair) results
+    output = foldr (\t s ->  t ++ "" ++ s) "" resultTokens
+    fileSuffix = maybe "" (\s -> " " ++ s) filePath
+    in output ++ fileSuffix
 
 
 main :: IO ()
 main = do 
     args <- getArgs
-    -- let inputParameter = getInputParameterFrom args
-    inputParameter <- return $ Left InputParamereter { getInputType = File, getFilePath = Just "test.txt", getCounterTypes = [BytesCounterType, SymbolsCounterType, WordsCounterType, LinesCounterType] }
+    let inputParameter = getInputParameterFrom args
     case inputParameter of 
         Left InputParamereter { getInputType = inputType, getFilePath = filePath, getCounterTypes = counterTypes } -> do 
             content <- getInputStringFrom inputType filePath
@@ -98,5 +98,3 @@ main = do
             let output = getOutputString results filePath
             putStrLn output
         Right error -> fail error
-    let v =  inputParameter
-    putStrLn $ show v
