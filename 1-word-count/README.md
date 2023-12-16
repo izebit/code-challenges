@@ -4,6 +4,10 @@ It's done as part of [code challenge #1](https://codingchallenges.substack.com/p
 
 ## Usage
 
+<img src="https://raw.githubusercontent.com/izebit/code-challenges/74db0d657f9eacbf50f21d2e6ea518a85ccd70df/1-word-count/demo/demo.gif" alt="gif">
+<br/>
+<br/>
+
 The app takes up to 2 parameters:  
 ```
 word-count -[counter types] [path to file]
@@ -20,13 +24,20 @@ In case if a counter types parameter is absent, default value is `-lwc`.
 The program reads text from console if path to file isn't passed.
 
 
-## Build
+## Development 
+### Implementation
+**Time complexity** is O(n)  
+**Space complexity** is O(1) 
 
-### Prerequisites:
+The app reads text sequentially symbol by symbol and performs computation based on input symbol. This approach lets reduce RAM consumption. 
+
+### Build
+
+#### Prerequisites:
 Before working with the project, download and install [Cabal](https://cabal.readthedocs.io/en/stable/index.html) if it's installed on your machine yet.  
 GHC version is >= 9.8.1
 
-### Commands:
+#### Commands:
 
 to build the project, use the following command:  
 ```bash
