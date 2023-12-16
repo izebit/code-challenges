@@ -1,10 +1,10 @@
 ## About
 The app has the similar functionality with unix `wc` - [word count](https://en.wikipedia.org/wiki/Wc_(Unix)) program i.e. you can use it to count bytes, symbols, words or lines in a text passed to.  
-It's done as part of [code challenge #1](https://codingchallenges.substack.com/p/coding-challenge-1).  
+It's done as part of [coding challenge #1](https://codingchallenges.substack.com/p/coding-challenge-1).  
 
 ## Usage
 
-<img src="https://raw.githubusercontent.com/izebit/code-challenges/74db0d657f9eacbf50f21d2e6ea518a85ccd70df/1-word-count/demo/demo.gif" alt="gif">
+<img src="https://raw.githubusercontent.com/izebit/coding-challenges/74db0d657f9eacbf50f21d2e6ea518a85ccd70df/1-word-count/demo/demo.gif" alt="gif">
 <br/>
 <br/>
 
