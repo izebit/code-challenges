@@ -48,6 +48,7 @@ handleString chars counterTypes = let
 
 getCounterTypesFrom :: String -> Maybe [CounterType]
 getCounterTypesFrom args = case args of 
+    ('-' : []) -> Nothing
     ('-' : types) -> sequence $ map f types where 
         f s = case s of 
             'c' -> Just BytesCounterType
@@ -75,17 +76,14 @@ getInputStringFrom :: InputType -> Maybe String -> IO String
 getInputStringFrom inputType filePath = case inputType of 
     File -> case filePath of
         Just f -> readFile f
-        _ -> undefined
+        _ -> error "there is no file for reading"
     Console -> getContents
-
 
 getOutputString :: [(CounterType, Int)] -> Maybe String -> String
 getOutputString results filePath = let 
-    resultTokens = map (\pair -> printf "%8d" $ snd pair) results
-    output = foldr (\t s ->  t ++ "" ++ s) "" resultTokens
+    output = concat $ map (\pair -> printf "%8d" $ snd pair) results
     fileSuffix = maybe "" (\s -> " " ++ s) filePath
     in output ++ fileSuffix
-
 
 main :: IO ()
 main = do 
