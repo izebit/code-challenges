@@ -13,6 +13,7 @@ category:           Text
 build-type:         Simple
 extra-doc-files:    CHANGELOG.md
 -- extra-source-files:
+-- README.md
 
 common warnings
     ghc-options: -Wall
@@ -23,5 +24,21 @@ executable json-parser
     -- other-modules:
     -- other-extensions:
     build-depends:    base ^>=4.19.0.0
-    hs-source-dirs:   app
+    hs-source-dirs:   src
+    default-language: GHC2021
+
+test-suite unit-test
+    type:           exitcode-stdio-1.0
+    hs-source-dirs: 
+        tests,
+        src
+    other-modules:
+        Main
+    main-is:        UnitTests.hs
+    ghc-options: -Wall
+    build-depends:
+        base ^>=4.19.0.0,
+        HUnit ^>=1.6, 
+        tasty,
+        tasty-hunit
     default-language: GHC2021
