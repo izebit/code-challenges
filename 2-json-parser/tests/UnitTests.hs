@@ -17,9 +17,24 @@ parserTests = testGroup "parser tests" [
       parseObjectExpression (createTokenizer "{}") @?= Just (ObjectExpression { getFieldExpressions = [] }, []),
     testCase "parse simple json object with spaces" $
       parseObjectExpression (createTokenizer "{  }") @?= Just (ObjectExpression { getFieldExpressions = [] }, []),
-     testCase "json object with string field" $ 
+    testCase "json object with string field" $ 
       parseObjectExpression (createTokenizer "{\"hello\" : \"world\" }") @?= Just (
-            ObjectExpression { getFieldExpressions = [(StringExpression { getStringValue = "\"hello\"" }, StringValueExpression $ StringExpression { getStringValue = "\"world\"" })] }, [])
+            ObjectExpression { getFieldExpressions = [(StringExpression { getStringValue = "hello" }, StringValueExpression $ StringExpression { getStringValue = "world" })] }, []),
+    testCase "json object with fields of different types" $ 
+      parseObjectExpression (createTokenizer "{ \
+                  \ \"key1\": true,       \
+                  \ \"key2\": false,      \
+                  \ \"key3\": null,       \
+                  \ \"key4\": \"value\",  \
+                  \ \"key5\": 101         \
+                  \ }" ) @?= Just (
+            ObjectExpression { getFieldExpressions = [
+              (StringExpression { getStringValue = "key1" }, BooleanValueExpression { getBooleanValue = True }),
+              (StringExpression { getStringValue = "key2" }, BooleanValueExpression { getBooleanValue = False }),
+              (StringExpression { getStringValue = "key3" }, NullValueExpression ),
+              (StringExpression { getStringValue = "key4" }, StringValueExpression $ StringExpression { getStringValue = "value" }),
+              (StringExpression { getStringValue = "key5" }, NumberValueExpression { getNumberValue = 101 })
+            ]}, [])
   ]
 
 tokenizerTests :: TestTree 
