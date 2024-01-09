@@ -14,26 +14,49 @@ unitTests = testGroup "unit tests" [tokenizerTests, parserTests]
 parserTests :: TestTree 
 parserTests = testGroup "parser tests" [ 
     testCase "parse simple json object" $
-      parseObjectExpression (createTokenizer "{}") @?= Just (ObjectExpression { getFieldExpressions = [] }, []),
+      getObjectExpression (createTokenizer "{}") @?= Just (ObjectExpression { getFields = [] }, []),
     testCase "parse simple json object with spaces" $
-      parseObjectExpression (createTokenizer "{  }") @?= Just (ObjectExpression { getFieldExpressions = [] }, []),
+      getObjectExpression (createTokenizer "{  }") @?= Just (ObjectExpression { getFields = [] }, []),
     testCase "json object with string field" $ 
-      parseObjectExpression (createTokenizer "{\"hello\" : \"world\" }") @?= Just (
-            ObjectExpression { getFieldExpressions = [(StringExpression { getStringValue = "hello" }, StringValueExpression $ StringExpression { getStringValue = "world" })] }, []),
+      getObjectExpression (createTokenizer "{\"hello\" : \"world\" }") @?= Just (
+            ObjectExpression { getFields = [(StringValueExpression { getStringValue = "hello" }, StringExpression $ StringValueExpression { getStringValue = "world" })] }, []),
     testCase "json object with fields of different types" $ 
-      parseObjectExpression (createTokenizer "{ \
+      getObjectExpression (createTokenizer "{ \
                   \ \"key1\": true,       \
                   \ \"key2\": false,      \
                   \ \"key3\": null,       \
                   \ \"key4\": \"value\",  \
                   \ \"key5\": 101         \
                   \ }" ) @?= Just (
-            ObjectExpression { getFieldExpressions = [
-              (StringExpression { getStringValue = "key1" }, BooleanValueExpression { getBooleanValue = True }),
-              (StringExpression { getStringValue = "key2" }, BooleanValueExpression { getBooleanValue = False }),
-              (StringExpression { getStringValue = "key3" }, NullValueExpression ),
-              (StringExpression { getStringValue = "key4" }, StringValueExpression $ StringExpression { getStringValue = "value" }),
-              (StringExpression { getStringValue = "key5" }, NumberValueExpression { getNumberValue = 101 })
+            ObjectExpression { getFields = [
+              (StringValueExpression { getStringValue = "key1" }, BooleanExpression { getBooleanValue = True }),
+              (StringValueExpression { getStringValue = "key2" }, BooleanExpression { getBooleanValue = False }),
+              (StringValueExpression { getStringValue = "key3" }, NullExpression ),
+              (StringValueExpression { getStringValue = "key4" }, StringExpression $ StringValueExpression { getStringValue = "value" }),
+              (StringValueExpression { getStringValue = "key5" }, NumberExpression { getNumberValue = 101 })
+            ]}, []),
+    testCase "json object with fields of complex types" $ 
+      getObjectExpression (createTokenizer " {    \
+            \  \"key1\": \"value\",                 \
+            \  \"key2\": 101,                       \
+            \  \"key3\": { \"key5\": false },        \
+            \  \"key4\": [                          \
+            \     {}, {                             \
+            \      \"key6\": false                  \
+            \    }]                                 \
+            \ }") @?= Just (
+            ObjectExpression { getFields = [
+              (StringValueExpression { getStringValue = "key1" }, StringExpression $ StringValueExpression { getStringValue = "value" }),
+              (StringValueExpression { getStringValue = "key2" }, NumberExpression { getNumberValue = 101 }),
+              (StringValueExpression { getStringValue = "key3" }, ObjectExpression { getFields = [
+                   (StringValueExpression { getStringValue = "key5" }, BooleanExpression { getBooleanValue = False })
+              ]}),
+              (StringValueExpression { getStringValue = "key4" }, ArrayExpression { getArrayElements = [
+                   ObjectExpression { getFields = [] }, 
+                   ObjectExpression { getFields = [
+                    (StringValueExpression { getStringValue = "key6" }, BooleanExpression { getBooleanValue = False })
+                   ]}
+              ]})
             ]}, [])
   ]
 
