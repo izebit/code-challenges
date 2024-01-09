@@ -78,7 +78,6 @@ tokenizerTests = testGroup "tokenizer tests" [
                     Token {getTokenType = OpenBracket, getTokenValue = "{"},
                     Token {getTokenType = Whitespace, getTokenValue = "             "}, 
 
-
                     Token {getTokenType = StringType, getTokenValue = "\"key1\""}, 
                     Token {getTokenType = Colon, getTokenValue = ":"}, 
                     Token {getTokenType = Whitespace, getTokenValue = " "}, 
@@ -113,6 +112,70 @@ tokenizerTests = testGroup "tokenizer tests" [
                     Token {getTokenType = NumberType, getTokenValue = "-100.1e+10"}, 
 
                     Token {getTokenType = Whitespace, getTokenValue = " "}, 
+                    Token {getTokenType = CloseBracket, getTokenValue = "}"}
+                  ],
+    testCase "json object with fields of complex types" $ 
+      createTokenizer " {                           \
+            \  \"key1\": \"value\",                 \
+            \  \"key2\": 101,                       \
+            \  \"key3\": { \"key5\": true },        \
+            \  \"key4\": [                          \
+            \     {}, {                             \
+            \      \"key6\": false                  \
+            \    }]                                 \
+            \ }" @?= [ 
+                    Token {getTokenType = Whitespace, getTokenValue = " "}, 
+                    Token {getTokenType = OpenBracket, getTokenValue = "{"},
+                    Token {getTokenType = Whitespace, getTokenValue = "                             "}, 
+
+                    Token {getTokenType = StringType, getTokenValue = "\"key1\""}, 
+                    Token {getTokenType = Colon, getTokenValue = ":"}, 
+                    Token {getTokenType = Whitespace, getTokenValue = " "}, 
+                    Token {getTokenType = StringType, getTokenValue = "\"value\""}, 
+                    Token {getTokenType = Comma, getTokenValue = ","}, 
+
+                    Token {getTokenType = Whitespace, getTokenValue = "                   "}, 
+                    Token {getTokenType = StringType, getTokenValue = "\"key2\""}, 
+                    Token {getTokenType = Colon, getTokenValue = ":"}, 
+                    Token {getTokenType = Whitespace, getTokenValue = " "}, 
+                    Token {getTokenType = NumberType, getTokenValue = "101"}, 
+                    Token {getTokenType = Comma, getTokenValue = ","}, 
+
+                    Token {getTokenType = Whitespace, getTokenValue = "                         "}, 
+                    Token {getTokenType = StringType, getTokenValue = "\"key3\""}, 
+                    Token {getTokenType = Colon, getTokenValue = ":"}, 
+                    Token {getTokenType = Whitespace, getTokenValue = " "}, 
+                    Token {getTokenType = OpenBracket, getTokenValue = "{"}, 
+                    Token {getTokenType = Whitespace, getTokenValue = " "}, 
+                    Token {getTokenType = StringType, getTokenValue = "\"key5\""}, 
+                    Token {getTokenType = Colon, getTokenValue = ":"}, 
+                    Token {getTokenType = Whitespace, getTokenValue = " "}, 
+                    Token {getTokenType = BooleanType, getTokenValue = "true"}, 
+                    Token {getTokenType = Whitespace, getTokenValue = " "}, 
+                    Token {getTokenType = CloseBracket, getTokenValue = "}"}, 
+                    Token {getTokenType = Comma, getTokenValue = ","}, 
+
+                    Token {getTokenType = Whitespace, getTokenValue = "          "}, 
+                    Token {getTokenType = StringType, getTokenValue = "\"key4\""}, 
+                    Token {getTokenType = Colon, getTokenValue = ":"}, 
+                    Token {getTokenType = Whitespace, getTokenValue = " "}, 
+                    Token {getTokenType = OpenSquareBracket, getTokenValue = "["}, 
+                    Token {getTokenType = Whitespace, getTokenValue = "                               "}, 
+                    Token {getTokenType = OpenBracket, getTokenValue = "{"}, 
+                    Token {getTokenType = CloseBracket, getTokenValue = "}"}, 
+                    Token {getTokenType = Comma, getTokenValue = ","}, 
+                    Token {getTokenType = Whitespace, getTokenValue = " "}, 
+                    Token {getTokenType = OpenBracket, getTokenValue = "{"}, 
+                    Token {getTokenType = Whitespace, getTokenValue = "                                   "}, 
+                    Token {getTokenType = StringType, getTokenValue = "\"key6\""}, 
+                    Token {getTokenType = Colon, getTokenValue = ":"}, 
+                    Token {getTokenType = Whitespace, getTokenValue = " "}, 
+                    Token {getTokenType = BooleanType, getTokenValue = "false"}, 
+                    Token {getTokenType = Whitespace, getTokenValue = "                      "}, 
+                    Token {getTokenType = CloseBracket, getTokenValue = "}"}, 
+                    Token {getTokenType = CloseSquareBracket, getTokenValue = "]"}, 
+
+                    Token {getTokenType = Whitespace, getTokenValue = "                                  "}, 
                     Token {getTokenType = CloseBracket, getTokenValue = "}"}
                   ]
   ]

@@ -2,14 +2,16 @@ module Parser where
 
 import Tokenizer
 
-type FieldExpression = (StringExpression, ValueExpression)
+type FieldExpression = (StringExpression, Expression)
 type FieldExpressions = [FieldExpression]
 data StringExpression = StringExpression { getStringValue::String } deriving (Show, Eq)
+data ArrayExpression = ArrayExpression { getArrayValues::[Expression] } deriving (Show, Eq)
 
-data ValueExpression =  NullValueExpression 
+data Expression =  NullValueExpression 
         | BooleanValueExpression { getBooleanValue::Bool }
         | NumberValueExpression { getNumberValue::Float }
         | StringValueExpression StringExpression 
+        | ArrayValueExpression ArrayExpression
         | ObjectValueExpression ObjectExpression 
     deriving (Show, Eq)
 
@@ -22,8 +24,11 @@ removeLeadingAndTrailingSymbols s = case s of
     [] -> []
     (_: xs) -> init xs
 
-parseValueExpression :: Tokenizer -> (ValueExpression, Tokenizer)
-parseValueExpression tokenizer = case getNextToken tokenizer of
+parseArrayExpression :: Tokenizer -> (ArrayExpression, Tokenizer) 
+parseArrayExpression = undefined
+
+parseExpression :: Tokenizer -> (Expression, Tokenizer)
+parseExpression tokenizer = case getNextToken tokenizer of
     Just(Token {getTokenType = NumberType, getTokenValue = value }, t) -> (NumberValueExpression { getNumberValue = read(value) }, t)
     Just(Token {getTokenType = BooleanType, getTokenValue = value }, t) -> (BooleanValueExpression { getBooleanValue = value == "true" }, t)
     Just(Token {getTokenType = NullType}, t) -> (NullValueExpression , t)
@@ -37,7 +42,7 @@ parseFieldExpression tokenizer = let
         Just (Token { getTokenType = StringType, getTokenValue = v }, tk) -> (StringExpression { getStringValue = removeLeadingAndTrailingSymbols v }, tk)
         _ -> error $ "can't parse key" ++ show(t)
     t3 =  eat Whitespace $ eat Colon $ eat Whitespace t2 
-    (value, t4) = parseValueExpression t3
+    (value, t4) = parseExpression t3
     in ((key, value), eat Whitespace t4)
 
 
