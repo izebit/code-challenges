@@ -5,35 +5,38 @@ import Tokenizer
 type FieldExpression = (StringExpression, Expression)
 type FieldExpressions = [FieldExpression]
 data StringExpression = StringExpression { getStringValue::String } deriving (Show, Eq)
-data ArrayExpression = ArrayExpression { getArrayValues::[Expression] } deriving (Show, Eq)
 
 data Expression =  NullValueExpression 
         | BooleanValueExpression { getBooleanValue::Bool }
         | NumberValueExpression { getNumberValue::Float }
         | StringValueExpression StringExpression 
-        | ArrayValueExpression ArrayExpression
-        | ObjectValueExpression ObjectExpression 
+        | ArrayValueExpression { getElements::[Expression]}
+        | ArrayExpression { getArrayValues::[Expression] }
+        | ObjectExpression { getFieldExpressions :: FieldExpressions }
     deriving (Show, Eq)
-
-data ObjectExpression = ObjectExpression {
-    getFieldExpressions :: FieldExpressions
-} deriving (Show, Eq)
 
 removeLeadingAndTrailingSymbols::String -> String
 removeLeadingAndTrailingSymbols s = case s of 
     [] -> []
     (_: xs) -> init xs
 
-parseArrayExpression :: Tokenizer -> (ArrayExpression, Tokenizer) 
+parseArrayExpression :: Tokenizer -> (Expression, Tokenizer) 
 parseArrayExpression = undefined
 
-parseExpression :: Tokenizer -> (Expression, Tokenizer)
-parseExpression tokenizer = case getNextToken tokenizer of
+parsePrimitiveExpression :: Tokenizer -> (Expression, Tokenizer) 
+parsePrimitiveExpression tokenizer = case getNextToken tokenizer of 
     Just(Token {getTokenType = NumberType, getTokenValue = value }, t) -> (NumberValueExpression { getNumberValue = read(value) }, t)
+    Just(Token {getTokenType = StringType, getTokenValue = value }, t) -> (StringValueExpression $ StringExpression { getStringValue =  removeLeadingAndTrailingSymbols value }, t)
+    Just(Token {getTokenType = NullType }, t) ->  (NullValueExpression , t)
     Just(Token {getTokenType = BooleanType, getTokenValue = value }, t) -> (BooleanValueExpression { getBooleanValue = value == "true" }, t)
-    Just(Token {getTokenType = NullType}, t) -> (NullValueExpression , t)
-    Just(Token {getTokenType = StringType, getTokenValue = value }, t) ->  (StringValueExpression $ StringExpression { getStringValue =  removeLeadingAndTrailingSymbols value }, t)
-    _ -> error $ "other types of values are not supported: " ++ show(tokenizer)
+    Just(Token {getTokenType = t}, _) ->  error $ "other types of values are not supported: " ++ show(t)
+    Nothing -> error "there are no tokens but expected at least one"
+
+parseExpression :: Tokenizer -> (Expression, Tokenizer)
+parseExpression tokenizer = case lookahead tokenizer of
+    Just OpenBracket -> parseObjectExpression tokenizer
+    Just OpenSquareBracket -> parseArrayExpression tokenizer
+    _ -> parsePrimitiveExpression tokenizer
 
 parseFieldExpression :: Tokenizer -> (FieldExpression, Tokenizer) 
 parseFieldExpression tokenizer = let 
@@ -55,19 +58,19 @@ parseFieldExpressions tokenizer = let
             in ((field: fs), t2)
         _ -> ([field], t1) 
     in (fields, tk)
-        
 
-parseObjectExpression :: Tokenizer -> Maybe (ObjectExpression, Tokenizer)
+parseObjectExpression :: Tokenizer -> (Expression, Tokenizer)
 parseObjectExpression tokenizer = let 
     t1 = eat Whitespace $ eat OpenBracket $ eat Whitespace tokenizer
     in case lookahead t1 of 
-        Just CloseBracket -> Just ( ObjectExpression { getFieldExpressions = [] }, eat CloseBracket t1)
+        Just CloseBracket -> (ObjectExpression { getFieldExpressions = [] }, eat CloseBracket t1)
         Just StringType -> let 
             (fieldExpressions, t) = parseFieldExpressions t1
-            in Just ( ObjectExpression { getFieldExpressions = fieldExpressions }, eat CloseBracket t)
+            in (ObjectExpression { getFieldExpressions = fieldExpressions }, eat CloseBracket t)
         _ -> error $ "can't parse object with next token: " ++ show (tokenizer)
 
-
+getObjectExpression :: Tokenizer -> Maybe (Expression, Tokenizer)
+getObjectExpression tokenizer = Just $ parseObjectExpression tokenizer
 
 main :: IO ()
 main = do
