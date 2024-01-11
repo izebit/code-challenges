@@ -13,7 +13,6 @@ tokens = [
         ("^:", Colon),
         ("^null", NullType),
         ("^(false|true)", BooleanType),
-        
         ("^-?(0|([[:digit:]]+))(\\.[[:digit:]])?([E|e][+-]?[[:digit:]]+)?", NumberType),
         ("^\"([[:word:]|[:space:]]+)\"", StringType)
     ]

@@ -2,16 +2,13 @@ module Parser where
 
 import Tokenizer
 
-type FieldExpression = (StringValueExpression, Expression)
-type FieldExpressions = [FieldExpression]
 data StringValueExpression = StringValueExpression { getStringValue::String } deriving (Show, Eq)
-
 data Expression =  NullExpression 
         | BooleanExpression { getBooleanValue::Bool }
         | NumberExpression { getNumberValue::Float }
         | StringExpression StringValueExpression 
         | ArrayExpression { getArrayElements::[Expression] }
-        | ObjectExpression { getFields :: FieldExpressions }
+        | ObjectExpression { getFields :: [(StringValueExpression, Expression)] }
     deriving (Show, Eq)
 
 removeLeadingAndTrailingSymbols::String -> String
@@ -59,26 +56,35 @@ parseExpression tokenizer = case lookahead tokenizer of
     Just OpenSquareBracket -> parseArrayExpression tokenizer
     _ -> parsePrimitiveExpression tokenizer
 
-parseFieldExpression :: Tokenizer -> (FieldExpression, Tokenizer) 
+parseFieldExpression :: Tokenizer -> ((StringValueExpression, Expression), Tokenizer) 
 parseFieldExpression tokenizer = let 
-    t = eat Whitespace tokenizer
-    (key, t2) = case getNextToken t of 
-        Just (Token { getTokenType = StringType, getTokenValue = v }, tk) -> (StringValueExpression { getStringValue = removeLeadingAndTrailingSymbols v }, tk)
-        _ -> error $ "can't parse key" ++ show(t)
+    t1 = eat Whitespace tokenizer
+    (key, t2) = case lookahead t1 of 
+        Just StringType -> case getNextToken t1 of 
+                Just (Token { getTokenType = StringType, getTokenValue = v }, tk) -> (StringValueExpression { getStringValue = removeLeadingAndTrailingSymbols v }, tk)
+                Just x -> error $ "expected string token, but " ++ show(x) ++ " found"
+                Nothing -> error "there are no tokens!"
+        Just x -> error $ "expected string token, but " ++ show(x) ++ " found"
+        Nothing -> error "there are no tokens!"
     t3 =  eat Whitespace $ eat Colon $ eat Whitespace t2 
     (value, t4) = parseExpression t3
     in ((key, value), eat Whitespace t4)
 
-
-parseFieldExpressions :: Tokenizer -> (FieldExpressions, Tokenizer)
+parseFieldExpressions :: Tokenizer -> ([(StringValueExpression, Expression)], Tokenizer)
 parseFieldExpressions tokenizer = let 
-    (field, t1) = parseFieldExpression $ eat Whitespace tokenizer
-    (fields, tk) = case lookahead t1 of 
-        Just Comma -> let
-            (fs, t2) = parseFieldExpressions $ eat Comma t1
-            in ((field: fs), t2)
-        _ -> ([field], t1) 
-    in (fields, tk)
+    t1 = eat Whitespace tokenizer
+    in case lookahead t1 of 
+        Just CloseBracket -> ([], t1)
+        Just StringType -> let 
+            (field, t2) = parseFieldExpression t1
+            in case lookahead t2 of 
+                Just Comma -> let 
+                    (fields, t3) = parseFieldExpressions $ eat Comma t2
+                    in ((field: fields), t3)
+                Just _ -> ([field], t2)
+                Nothing ->  error "there are no tokens!"
+        Just x -> error $ "expected string token, but " ++ show(x) ++ " found"
+        Nothing -> error "there are no tokens!"
 
 parseObjectExpression :: Tokenizer -> (Expression, Tokenizer)
 parseObjectExpression tokenizer = let 
@@ -86,9 +92,10 @@ parseObjectExpression tokenizer = let
     in case lookahead t1 of 
         Just CloseBracket -> (ObjectExpression { getFields = [] }, eat CloseBracket t1)
         Just StringType -> let 
-            (fieldExpressions, t) = parseFieldExpressions t1
-            in (ObjectExpression { getFields = fieldExpressions }, eat CloseBracket t)
-        _ -> error $ "can't parse object with next token: " ++ show (tokenizer)
+            (fields, t) = parseFieldExpressions t1
+            in (ObjectExpression { getFields = fields }, eat CloseBracket t)
+        Just x -> error $ "expected string token, but " ++ show(x) ++ " found"
+        Nothing -> error "there are no tokens!"
 
 getObjectExpression :: Tokenizer -> Maybe (Expression, Tokenizer)
 getObjectExpression tokenizer = Just $ parseObjectExpression tokenizer
