@@ -9,34 +9,34 @@ main :: IO ()
 main = defaultMain unitTests 
 
 unitTests :: TestTree
-unitTests = testGroup "unit tests" [tokenizerTests, parserTests]
+unitTests = testGroup "unit tests" [tokenizerTests, parserTests, fileTests]
 
 parserTests :: TestTree 
 parserTests = testGroup "parser tests" [ 
     testCase "parse simple json object" $
-      getObjectExpression (createTokenizer "{}") @?= Just (ObjectExpression { getFields = [] }, []),
+      createExpressionFrom "{}" @?= Right ObjectExpression { getFields = [] },
     testCase "parse simple json object with spaces" $
-      getObjectExpression (createTokenizer "{  }") @?= Just (ObjectExpression { getFields = [] }, []),
+      createExpressionFrom "{  }" @?= Right ObjectExpression { getFields = [] },
     testCase "json object with string field" $ 
-      getObjectExpression (createTokenizer "{\"hello\" : \"world\" }") @?= Just (
-            ObjectExpression { getFields = [(StringValueExpression { getStringValue = "hello" }, StringExpression $ StringValueExpression { getStringValue = "world" })] }, []),
+      createExpressionFrom "{\"hello\" : \"world\" }" @?= Right 
+            ObjectExpression { getFields = [(StringValueExpression { getStringValue = "hello" }, StringExpression $ StringValueExpression { getStringValue = "world" })] },
     testCase "json object with fields of different types" $ 
-      getObjectExpression (createTokenizer "{ \
+      createExpressionFrom "{ \
                   \ \"key1\": true,       \
                   \ \"key2\": false,      \
                   \ \"key3\": null,       \
                   \ \"key4\": \"value\",  \
                   \ \"key5\": 101         \
-                  \ }" ) @?= Just (
+                  \ }" @?= Right
             ObjectExpression { getFields = [
               (StringValueExpression { getStringValue = "key1" }, BooleanExpression { getBooleanValue = True }),
               (StringValueExpression { getStringValue = "key2" }, BooleanExpression { getBooleanValue = False }),
               (StringValueExpression { getStringValue = "key3" }, NullExpression ),
               (StringValueExpression { getStringValue = "key4" }, StringExpression $ StringValueExpression { getStringValue = "value" }),
               (StringValueExpression { getStringValue = "key5" }, NumberExpression { getNumberValue = 101 })
-            ]}, []),
+            ]},
     testCase "json object with fields of complex types" $ 
-      getObjectExpression (createTokenizer " {    \
+      createExpressionFrom " {    \
             \  \"key1\": \"value\",                 \
             \  \"key2\": 101,                       \
             \  \"key3\": { \"key5\": false },        \
@@ -44,7 +44,7 @@ parserTests = testGroup "parser tests" [
             \     {}, {                             \
             \      \"key6\": false                  \
             \    }]                                 \
-            \ }") @?= Just (
+            \ }" @?= Right 
             ObjectExpression { getFields = [
               (StringValueExpression { getStringValue = "key1" }, StringExpression $ StringValueExpression { getStringValue = "value" }),
               (StringValueExpression { getStringValue = "key2" }, NumberExpression { getNumberValue = 101 }),
@@ -57,7 +57,7 @@ parserTests = testGroup "parser tests" [
                     (StringValueExpression { getStringValue = "key6" }, BooleanExpression { getBooleanValue = False })
                    ]}
               ]})
-            ]}, [])
+            ]}
   ]
 
 tokenizerTests :: TestTree 
@@ -65,22 +65,22 @@ tokenizerTests = testGroup "tokenizer tests" [
     testCase "empty string" $
       createTokenizer "  \
       \     \n\
-      \ " @?= [
+      \ " @?= Right [ 
                     Token {getTokenType = Whitespace, getTokenValue = "       \n "} 
-                  ],
+              ],
     testCase "empty json object" $
-      createTokenizer "{}" @?= [
+      createTokenizer "{}" @?= Right [
                     Token {getTokenType = OpenBracket, getTokenValue = "{"}, 
                     Token {getTokenType = CloseBracket, getTokenValue = "}"}
                   ],
     testCase "json object with spaces" $ 
-      createTokenizer "{  }" @?= [ 
+      createTokenizer "{  }" @?= Right [ 
                     Token {getTokenType = OpenBracket, getTokenValue = "{"}, 
                     Token {getTokenType = Whitespace, getTokenValue = "  "}, 
                     Token {getTokenType = CloseBracket, getTokenValue = "}"}
                   ],
     testCase "json object with string field" $ 
-      createTokenizer "{\"hello\" : \"world\" }" @?= [ 
+      createTokenizer "{\"hello\" : \"world\" }" @?= Right [ 
                     Token {getTokenType = OpenBracket, getTokenValue = "{"}, 
                     Token {getTokenType = StringType, getTokenValue = "\"hello\""}, 
                     Token {getTokenType = Whitespace, getTokenValue = " "}, 
@@ -96,7 +96,7 @@ tokenizerTests = testGroup "tokenizer tests" [
             \  \"key2\": false,     \
             \  \"key3\": null,      \
             \  \"key4\": \"value\", \
-            \  \"key5\": -100.1e+10 }" @?= [ 
+            \  \"key5\": -100.1e+10 }" @?= Right [ 
                     Token {getTokenType = Whitespace, getTokenValue = " "}, 
                     Token {getTokenType = OpenBracket, getTokenValue = "{"},
                     Token {getTokenType = Whitespace, getTokenValue = "             "}, 
@@ -146,7 +146,7 @@ tokenizerTests = testGroup "tokenizer tests" [
             \     {}, {                             \
             \      \"key6\": false                  \
             \    }]                                 \
-            \ }" @?= [ 
+            \ }" @?= Right [ 
                     Token {getTokenType = Whitespace, getTokenValue = " "}, 
                     Token {getTokenType = OpenBracket, getTokenValue = "{"},
                     Token {getTokenType = Whitespace, getTokenValue = "                             "}, 
@@ -202,3 +202,10 @@ tokenizerTests = testGroup "tokenizer tests" [
                     Token {getTokenType = CloseBracket, getTokenValue = "}"}
                   ]
   ]
+
+fileTests :: TestTree 
+fileTests = testGroup "parser tests" []
+
+
+createExpressionFrom :: String -> Either String Expression
+createExpressionFrom str = ((createTokenizer str) >>= (\tokenizer -> getObjectExpression tokenizer))

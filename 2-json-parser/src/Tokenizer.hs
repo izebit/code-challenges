@@ -21,23 +21,28 @@ data TokenType = OpenBracket | CloseBracket | Whitespace | StringType | Colon | 
     deriving (Eq, Show)
 data Token = Token { getTokenType::TokenType, getTokenValue::String } deriving (Show, Eq)
 
-getTokenFrom :: String -> Maybe (Token, String)
+getTokenFrom :: String -> Either String (Maybe (Token, String))
 getTokenFrom str = test tokens str where 
-    test :: [(String, TokenType)] -> String -> Maybe (Token, String)
+    test :: [(String, TokenType)] -> String -> Either String (Maybe (Token, String))
     test [] s = if null s 
-                then Nothing 
-                else error $ "can't parse token: '" ++ s ++ "' "
+                then return Nothing 
+                else Left $ "can't parse token: '" ++ s ++ "' "
     test ((pattern, tokenType) : xs) s = result where 
           (_, value, rest) = s =~ pattern :: (String, String, String)
           result = if value == "" 
                    then test xs s 
-                   else Just (Token {getTokenType = tokenType, getTokenValue = value}, rest)
+                   else return $ Just (Token {getTokenType = tokenType, getTokenValue = value}, rest)
 
-createTokenizer :: [Char] -> Tokenizer
-createTokenizer [] = []
-createTokenizer str = case getTokenFrom str of
-    Just (token, rest) -> (token : createTokenizer rest)
-    _ -> []
+createTokenizer :: [Char] -> Either String Tokenizer
+createTokenizer [] = Right []
+createTokenizer str = do
+    t <- getTokenFrom str
+    case t of 
+        Just (token, s) -> do 
+            ts <- createTokenizer s
+            Right $ (token: ts)  
+        Nothing -> if null str then Right []
+                   else Left $ "there are unparsed str: " ++ str 
 
 
 type Tokenizer = [Token] 
