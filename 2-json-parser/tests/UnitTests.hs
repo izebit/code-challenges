@@ -208,6 +208,5 @@ tokenizerTests = testGroup "tokenizer tests" [
 fileTests :: TestTree 
 fileTests = testGroup "parser tests" []
 
-
 createExpressionFrom :: String -> Either String Expression
 createExpressionFrom str = ((createTokenizer str) >>= (\tokenizer -> getObjectExpression tokenizer))

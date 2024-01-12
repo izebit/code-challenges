@@ -1,6 +1,10 @@
 module Parser where
 
 import Tokenizer
+import System.Environment (getArgs)
+import System.Directory (doesFileExist)
+import System.Exit
+import System.IO
 
 data StringValueExpression = StringValueExpression { getStringValue :: String } deriving (Show, Eq)
 data Expression =  NullExpression 
@@ -67,10 +71,10 @@ parseFieldExpression tokenizer = do
         Just StringType -> case getNextToken t1 of 
                 Just (Token { getTokenType = StringType, getTokenValue = v }, tk) ->
                     return (StringValueExpression { getStringValue = removeLeadingAndTrailingSymbols v }, tk)
-                Just x -> Left $ "expected string token, but " ++ show(x) ++ " found"
+                Just x -> Left $ "expected string token, but " ++ show(x) ++ " token found"
                 Nothing -> Left "there are no tokens!"
         Just x -> Left $ "expected string token, but " ++ show(x) ++ " found"
-        Nothing -> Left "there are no tokens!"
+        Nothing -> Left "expected string token, there are no tokens!"
     let t3 =  eat Whitespace $ eat Colon $ eat Whitespace t2 
     (value, t4) <- parseExpression t3
     return ((key, value), eat Whitespace t4)
@@ -89,9 +93,10 @@ parseFieldExpressions tokenizer = do
                 Just _ -> return ([field], t2)
                 Nothing ->  Left "there are no tokens!"
         Just x -> Left $ "expected string token, but " ++ show(x) ++ " found"
-        Nothing -> Left "there are no tokens!"
+        Nothing -> Left "expected } token or string token, but there are no more tokens"
 
 parseObjectExpression :: Tokenizer -> Either String (Expression, Tokenizer)
+parseObjectExpression [] = Left "there no tokens for json object" 
 parseObjectExpression tokenizer = do 
     let t1 = eat Whitespace $ eat OpenBracket $ eat Whitespace tokenizer
     case lookahead t1 of 
@@ -100,7 +105,7 @@ parseObjectExpression tokenizer = do
             (fields, t) <- parseFieldExpressions t1
             return (ObjectExpression { getFields = fields }, eat CloseBracket t)
         Just x -> Left $ "expected string token, but " ++ show(x) ++ " found"
-        Nothing -> Left "there are no tokens!"
+        Nothing -> Left "expected } token or string token, but there are no more tokens"
 
 getObjectExpression :: Tokenizer -> Either String Expression
 getObjectExpression tokenizer = do 
@@ -109,8 +114,31 @@ getObjectExpression tokenizer = do
         Nothing -> return e
         _ -> Left $ "there are more tokens than expected: " ++ show(t)
 
+readFileFrom :: String -> IO String
+readFileFrom filePath = do
+    fileExists <- doesFileExist filePath
+    if fileExists then 
+        readFile filePath
+    else 
+        exitWithMessage $ "can't read the file: " ++ filePath
+
+validateJson :: String -> Either String Bool
+validateJson jsonStr = do 
+    tk <- createTokenizer jsonStr
+    _ <- getObjectExpression tk
+    return True
+
+exitWithMessage :: String -> IO a
+exitWithMessage msg = hPutStrLn stderr msg >> exitWith (ExitFailure 2) 
 
 main :: IO ()
 main = do
-    return ();
+    args <- getArgs
+    case args of 
+        [] -> exitWithMessage "expected parameter: path to json file"
+        (filePath: _) -> do
+            jsonStr <- readFileFrom filePath
+            case validateJson jsonStr of 
+                Left errorMsg -> exitWithMessage errorMsg
+                _ -> return () 
 
