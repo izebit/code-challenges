@@ -62,6 +62,8 @@ parserTests = testGroup "parser tests" [
 
 tokenizerTests :: TestTree 
 tokenizerTests = testGroup "tokenizer tests" [ 
+    testCase "invalid str" $
+      createTokenizer " !!! " @?= Left "can't parse token: '!!! '",
     testCase "empty string" $
       createTokenizer "  \
       \     \n\

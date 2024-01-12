@@ -26,7 +26,7 @@ getTokenFrom str = test tokens str where
     test :: [(String, TokenType)] -> String -> Either String (Maybe (Token, String))
     test [] s = if null s 
                 then return Nothing 
-                else Left $ "can't parse token: '" ++ s ++ "' "
+                else Left $ "can't parse token: '" ++ s ++ "'"
     test ((pattern, tokenType) : xs) s = result where 
           (_, value, rest) = s =~ pattern :: (String, String, String)
           result = if value == "" 
