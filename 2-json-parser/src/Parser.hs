@@ -22,27 +22,30 @@ removeLeadingAndTrailingSymbols s = case s of
 
 parseArrayElements :: Tokenizer -> Either String ([Expression], Tokenizer) 
 parseArrayElements tokenizer = do 
-    let t = eat Whitespace tokenizer
+    t <- eat Whitespace tokenizer
     case lookahead t of 
         Just CloseSquareBracket -> return ([], t)
         Just _ -> do 
             (value, t2) <- parseExpression t
             case lookahead t2 of 
                 Just Comma -> do  
-                            (values, t3) <- parseArrayElements $ eat Comma t2
-                            return ((value: values), t3)
+                            (values, t4) <- eat Comma t2 >>= parseArrayElements
+                            return ((value: values), t4)
                 Just _ -> return ([value], t2)
                 Nothing -> Left "there are no tokens!"
         Nothing -> Left "there are no tokens!"
 
 parseArrayExpression :: Tokenizer -> Either String (Expression, Tokenizer) 
 parseArrayExpression tokenizer = do
-    let t = eat OpenSquareBracket tokenizer
+    t <- eat OpenSquareBracket tokenizer
     case lookahead t of 
-        Just CloseBracket -> return (ArrayExpression { getArrayElements = [] }, eat CloseSquareBracket t) 
+        Just CloseBracket -> do 
+            t2 <- eat CloseSquareBracket t
+            return (ArrayExpression { getArrayElements = [] }, t2) 
         Just _ -> do 
             (elements, t2) <- parseArrayElements t
-            return (ArrayExpression { getArrayElements = elements}, eat CloseSquareBracket t2)
+            t3 <- eat CloseSquareBracket t2
+            return (ArrayExpression { getArrayElements = elements}, t3)
         Nothing -> Left "expected close square bracket"
 
 parsePrimitiveExpression :: Tokenizer -> Either String (Expression, Tokenizer) 
@@ -66,7 +69,7 @@ parseExpression tokenizer = case lookahead tokenizer of
 
 parseFieldExpression :: Tokenizer -> Either String ((StringValueExpression, Expression), Tokenizer) 
 parseFieldExpression tokenizer = do 
-    let t1 = eat Whitespace tokenizer
+    t1 <- eat Whitespace tokenizer
     (key, t2) <- case lookahead t1 of 
         Just StringType -> case getNextToken t1 of 
                 Just (Token { getTokenType = StringType, getTokenValue = v }, tk) ->
@@ -75,21 +78,23 @@ parseFieldExpression tokenizer = do
                 Nothing -> Left "there are no tokens!"
         Just x -> Left $ "expected string token, but " ++ show(x) ++ " found"
         Nothing -> Left "expected string token, there are no tokens!"
-    let t3 =  eat Whitespace $ eat Colon $ eat Whitespace t2 
+    t3 <- eat Whitespace t2 >>= eat Colon >>= eat Whitespace 
     (value, t4) <- parseExpression t3
-    return ((key, value), eat Whitespace t4)
+    t5 <- eat Whitespace t4
+    return ((key, value), t5)
 
 parseFieldExpressions :: Tokenizer -> Either String ([(StringValueExpression, Expression)], Tokenizer)
 parseFieldExpressions tokenizer = do 
-    let t1 = eat Whitespace tokenizer
+    t1 <- eat Whitespace tokenizer
     case lookahead t1 of 
         Just CloseBracket -> return ([], t1)
         Just StringType -> do 
             (field, t2) <- parseFieldExpression t1
             case lookahead t2 of 
                 Just Comma -> do 
-                    (fields, t3) <- parseFieldExpressions $ eat Comma t2
-                    return ((field: fields), t3)
+                    t3 <- eat Comma t2
+                    (fields, t4) <- parseFieldExpressions t3
+                    return ((field: fields), t4)
                 Just _ -> return ([field], t2)
                 Nothing ->  Left "there are no tokens!"
         Just x -> Left $ "expected string token, but " ++ show(x) ++ " found"
@@ -98,18 +103,21 @@ parseFieldExpressions tokenizer = do
 parseObjectExpression :: Tokenizer -> Either String (Expression, Tokenizer)
 parseObjectExpression [] = Left "there no tokens for json object" 
 parseObjectExpression tokenizer = do 
-    let t1 = eat Whitespace $ eat OpenBracket $ eat Whitespace tokenizer
+    t1 <- eat Whitespace tokenizer >>= eat OpenBracket >>= eat Whitespace
     case lookahead t1 of 
-        Just CloseBracket -> return (ObjectExpression { getFields = [] }, eat CloseBracket t1)
+        Just CloseBracket -> do 
+            t2 <- eat CloseBracket t1
+            return (ObjectExpression { getFields = [] }, t2)
         Just StringType -> do 
             (fields, t) <- parseFieldExpressions t1
-            return (ObjectExpression { getFields = fields }, eat CloseBracket t)
+            t2 <- eat CloseBracket t
+            return (ObjectExpression { getFields = fields }, t2)
         Just x -> Left $ "expected string token, but " ++ show(x) ++ " found"
         Nothing -> Left "expected } token or string token, but there are no more tokens"
 
 getObjectExpression :: Tokenizer -> Either String Expression
 getObjectExpression tokenizer = do
-    let t1 = eat Whitespace tokenizer
+    t1 <- eat Whitespace tokenizer
     case lookahead t1 of 
         Just OpenBracket -> do
             (e, t2) <- parseObjectExpression tokenizer

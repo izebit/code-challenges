@@ -50,18 +50,18 @@ getNextToken :: Tokenizer -> Maybe (Token, Tokenizer)
 getNextToken [] = Nothing
 getNextToken (x: xs) = Just (x, xs)
 
-eat :: TokenType -> Tokenizer -> Tokenizer
+eat :: TokenType -> Tokenizer -> Either String Tokenizer
 eat tokenType tokenizer = let 
     eat_ tp tk = case getNextToken tk of
         Just (token, t) -> if getTokenType token == tp 
-                        then t 
-                        else error $ "expected token type: " ++ show (tp) ++ ", but found: " ++ show (getTokenType token)
-        _ -> error $ "cant eat token type: " ++ show (tokenType) ++ " because there is no tokens"
+                           then return t 
+                           else Left $ "expected token type: " ++ show (tp) ++ ", but found: " ++ show (getTokenType token)
+        _ -> Left $ "cant eat token type: " ++ show (tokenType) ++ " because there is no tokens"
     -- because whitespace might be nothing https://www.json.org/json-en.html
     in if tokenType == Whitespace 
        then case lookahead tokenizer of 
             Just Whitespace -> eat_ Whitespace tokenizer
-            _ -> tokenizer
+            _ -> return tokenizer
        else eat_ tokenType tokenizer
 
 
