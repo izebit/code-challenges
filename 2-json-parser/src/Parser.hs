@@ -108,13 +108,23 @@ parseObjectExpression tokenizer = do
         Nothing -> Left "expected } token or string token, but there are no more tokens"
 
 getObjectExpression :: Tokenizer -> Either String Expression
-getObjectExpression tokenizer = do 
-    (e, t) <- parseObjectExpression tokenizer
-    case getNextToken t of 
-        Nothing -> return e
-        _ -> Left $ "there are more tokens than expected: " ++ show(t)
+getObjectExpression tokenizer = do
+    let t1 = eat Whitespace tokenizer
+    case lookahead t1 of 
+        Just OpenBracket -> do
+            (e, t2) <- parseObjectExpression tokenizer
+            case getNextToken t2 of 
+                Nothing -> return e
+                _ -> Left $ "there are more tokens than expected: " ++ show(t2)
+        Just OpenSquareBracket -> do
+            (e, t2) <- parseArrayExpression tokenizer
+            case getNextToken t2 of 
+                Nothing -> return e
+                _ -> Left $ "there are more tokens than expected: " ++ show(t2)
+        Just x -> Left $ "expected { or [ tokens, but not " ++ show (x)
+        Nothing -> Left "empty string"
 
-readFileFrom :: String -> IO String
+readFileFrom :: FilePath -> IO String
 readFileFrom filePath = do
     fileExists <- doesFileExist filePath
     if fileExists then 
