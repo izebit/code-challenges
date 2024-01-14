@@ -5,6 +5,10 @@ import System.Environment (getArgs)
 import System.Directory (doesFileExist)
 import System.Exit
 import System.IO
+import Control.Monad
+
+deepRecursionLimit :: Int
+deepRecursionLimit = 20
 
 data StringValueExpression = StringValueExpression { getStringValue :: String } deriving (Show, Eq)
 data Expression =  NullExpression 
@@ -20,16 +24,17 @@ removeLeadingAndTrailingSymbols s = case s of
     [] -> []
     (_: xs) -> init xs
 
-parseArrayElements :: Tokenizer -> Either String ([Expression], Tokenizer) 
-parseArrayElements tokenizer = do 
+parseArrayElements :: Int -> Tokenizer -> Either String ([Expression], Tokenizer) 
+parseArrayElements currentRecursionLevel tokenizer = do 
+    when (currentRecursionLevel == 0) $ Left "too deep recursion"
     t <- eat Whitespace tokenizer
     case lookahead t of 
         Just CloseSquareBracket -> return ([], t)
         Just _ -> do 
-            (value, t2) <- parseExpression t
+            (value, t2) <- parseExpression currentRecursionLevel t
             case lookahead t2 of 
                 Just Comma -> do  
-                            (values, t4) <- eat Comma t2 >>= parseArrayElements
+                            (values, t4) <- eat Comma t2 >>= parseArrayElements currentRecursionLevel
                             if null values then
                                 Left "expected array values after , symbol"
                             else 
@@ -38,15 +43,16 @@ parseArrayElements tokenizer = do
                 Nothing -> Left "there are no tokens!"
         Nothing -> Left "there are no tokens!"
 
-parseArrayExpression :: Tokenizer -> Either String (Expression, Tokenizer) 
-parseArrayExpression tokenizer = do
+parseArrayExpression :: Int -> Tokenizer -> Either String (Expression, Tokenizer) 
+parseArrayExpression currentRecursionLevel tokenizer = do
+    when (currentRecursionLevel == 0) $ Left "too deep recursion"
     t <- eat OpenSquareBracket tokenizer >>= eat Whitespace
     case lookahead t of 
         Just CloseBracket -> do 
             t2 <- eat CloseSquareBracket t
             return (ArrayExpression { getArrayElements = [] }, t2) 
         Just _ -> do 
-            (elements, t2) <- parseArrayElements t
+            (elements, t2) <- parseArrayElements (currentRecursionLevel - 1) t
             t3 <- eat CloseSquareBracket t2
             return (ArrayExpression { getArrayElements = elements}, t3)
         Nothing -> Left "expected close square bracket"
@@ -67,14 +73,15 @@ parsePrimitiveExpression tokenizer = do
     tk <- eat Whitespace t
     return (expression, tk)
 
-parseExpression :: Tokenizer -> Either String (Expression, Tokenizer)
-parseExpression tokenizer = case lookahead tokenizer of
-    Just OpenBracket -> parseObjectExpression tokenizer
-    Just OpenSquareBracket -> parseArrayExpression tokenizer
-    _ -> parsePrimitiveExpression tokenizer
+parseExpression :: Int -> Tokenizer -> Either String (Expression, Tokenizer)
+parseExpression currentRecursionLevel tokenizer = do 
+    case lookahead tokenizer of
+        Just OpenBracket -> parseObjectExpression currentRecursionLevel tokenizer
+        Just OpenSquareBracket -> parseArrayExpression currentRecursionLevel tokenizer
+        _ -> parsePrimitiveExpression tokenizer
 
-parseFieldExpression :: Tokenizer -> Either String ((StringValueExpression, Expression), Tokenizer) 
-parseFieldExpression tokenizer = do 
+parseFieldExpression :: Int -> Tokenizer -> Either String ((StringValueExpression, Expression), Tokenizer) 
+parseFieldExpression currentRecursionLevel tokenizer = do 
     t1 <- eat Whitespace tokenizer
     (key, t2) <- case lookahead t1 of 
         Just StringType -> case getNextToken t1 of 
@@ -85,21 +92,22 @@ parseFieldExpression tokenizer = do
         Just x -> Left $ "expected string token, but " ++ show(x) ++ " found"
         Nothing -> Left "expected string token, there are no tokens!"
     t3 <- eat Whitespace t2 >>= eat Colon >>= eat Whitespace 
-    (value, t4) <- parseExpression t3
+    (value, t4) <- parseExpression currentRecursionLevel t3
     t5 <- eat Whitespace t4
     return ((key, value), t5)
 
-parseFieldExpressions :: Tokenizer -> Either String ([(StringValueExpression, Expression)], Tokenizer)
-parseFieldExpressions tokenizer = do 
+parseFieldExpressions :: Int -> Tokenizer -> Either String ([(StringValueExpression, Expression)], Tokenizer)
+parseFieldExpressions currentRecursionLevel tokenizer = do 
+    when (currentRecursionLevel == 0) $ Left "too deep recursion"
     t1 <- eat Whitespace tokenizer
     case lookahead t1 of 
         Just CloseBracket -> return ([], t1)
         Just StringType -> do 
-            (field, t2) <- parseFieldExpression t1
+            (field, t2) <- parseFieldExpression currentRecursionLevel t1
             case lookahead t2 of 
                 Just Comma -> do 
                     t3 <- eat Comma t2
-                    (fields, t4) <- parseFieldExpressions t3
+                    (fields, t4) <- parseFieldExpressions currentRecursionLevel t3
                     if null fields then
                         Left "after , must be object field, but there is nothing"
                     else 
@@ -109,16 +117,17 @@ parseFieldExpressions tokenizer = do
         Just x -> Left $ "expected string token, but " ++ show(x) ++ " found"
         Nothing -> Left "expected } token or string token, but there are no more tokens"
 
-parseObjectExpression :: Tokenizer -> Either String (Expression, Tokenizer)
-parseObjectExpression [] = Left "there no tokens for json object" 
-parseObjectExpression tokenizer = do 
+parseObjectExpression :: Int -> Tokenizer -> Either String (Expression, Tokenizer)
+parseObjectExpression _ [] = Left "there no tokens for json object" 
+parseObjectExpression currentRecursionLevel tokenizer = do 
+    when (currentRecursionLevel == 0) $ Left "too deep recursion"
     t1 <- eat Whitespace tokenizer >>= eat OpenBracket >>= eat Whitespace
     case lookahead t1 of 
         Just CloseBracket -> do 
             t2 <- eat CloseBracket t1
             return (ObjectExpression { getFields = [] }, t2)
         Just StringType -> do 
-            (fields, t) <- parseFieldExpressions t1
+            (fields, t) <- parseFieldExpressions (currentRecursionLevel - 1) t1
             t2 <- eat CloseBracket t
             return (ObjectExpression { getFields = fields }, t2)
         Just x -> Left $ "expected string token, but " ++ show(x) ++ " found"
@@ -129,13 +138,13 @@ getObjectExpression tokenizer = do
     t1 <- eat Whitespace tokenizer
     case lookahead t1 of 
         Just OpenBracket -> do
-            (e, t2) <- parseObjectExpression tokenizer
+            (e, t2) <- parseObjectExpression deepRecursionLimit tokenizer
             t3 <- eat Whitespace t2
             case getNextToken t3 of 
                 Nothing -> return e
                 _ -> Left $ "there are more tokens than expected: " ++ show(t3)
         Just OpenSquareBracket -> do
-            (e, t2) <- parseArrayExpression tokenizer
+            (e, t2) <- parseArrayExpression deepRecursionLimit tokenizer
             t3 <- eat Whitespace t2
             case getNextToken t3 of 
                 Nothing -> return e
