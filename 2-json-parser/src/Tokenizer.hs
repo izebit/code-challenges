@@ -1,21 +1,27 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 module Tokenizer where
 
 import Text.Regex.TDFA
+import Text.RawString.QQ
 
 tokens :: [(String, TokenType)]
 tokens = [
-        ("^{", OpenBracket), 
-        ("^}", CloseBracket),
-        ("^\\[", OpenSquareBracket), 
-        ("^\\]", CloseSquareBracket),
-        ("^[[:space:]]+", Whitespace),
-        ("^,", Comma),
-        ("^:", Colon),
-        ("^null", NullType),
-        ("^(false|true)", BooleanType),
-        ("^-?(0|([[:digit:]]+))(\\.[[:digit:]])?([E|e][+-]?[[:digit:]]+)?", NumberType),
-        ("^\"([[:word:]|[:space:]]+)\"", StringType)
+        ([r|^{|], OpenBracket), 
+        ([r|^}|], CloseBracket),         
+        ([r|^\[|], OpenSquareBracket),
+        ([r|^\]|], CloseSquareBracket),
+        ([r|^[[:space:]]+|], Whitespace),
+        ([r|^,|], Comma),
+        ([r|^:|], Colon),
+        ([r|^null|], NullType),
+        ([r|^(false|true)|], BooleanType),
+        ([r|^-?(0|[1-9][0-9]*)(\.[0-9]*)?([eE][-+]?[0-9]+)?|], NumberType),
+        ([r|^"[^"\\]*(\\.|[^"\\]*)*"|], StringType)
     ]
+
+toRegex = makeRegexOpts defaultCompOpt{multiline=False} defaultExecOpt
+(=~+) text pattern = match (toRegex pattern :: Regex) text
 
 data TokenType = OpenBracket | CloseBracket | Whitespace | StringType | Colon | Comma | OpenSquareBracket | CloseSquareBracket | BooleanType | NullType | NumberType
     deriving (Eq, Show)
@@ -28,7 +34,7 @@ getTokenFrom str = test tokens str where
                 then return Nothing 
                 else Left $ "can't parse token: '" ++ s ++ "'"
     test ((pattern, tokenType) : xs) s = result where 
-          (_, value, rest) = s =~ pattern :: (String, String, String)
+          (_, value, rest) = s =~+ pattern :: (String, String, String)
           result = if value == "" 
                    then test xs s 
                    else return $ Just (Token {getTokenType = tokenType, getTokenValue = value}, rest)

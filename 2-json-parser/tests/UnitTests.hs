@@ -4,12 +4,17 @@ import Tokenizer
 import Parser
 import Test.Tasty
 import Test.Tasty.HUnit
+import System.Directory (listDirectory)
+
 
 main :: IO ()
-main = defaultMain unitTests 
+main = do 
+  -- successTestFiles <- readFilesFromDirectory "test-files/success/" 
+  -- let fileTestGroup = testGroup "regression testing" $ failTests ++ (successTests successTestFiles) 
+  let fileTestGroup = testGroup "regression testing" $ []
+  
 
-unitTests :: TestTree
-unitTests = testGroup "unit tests" [tokenizerTests, parserTests, fileTests]
+  defaultMain $ testGroup "unit tests" [tokenizerTests, parserTests, fileTestGroup]
 
 parserTests :: TestTree 
 parserTests = testGroup "parser tests" [ 
@@ -39,7 +44,7 @@ parserTests = testGroup "parser tests" [
       createExpressionFrom " {    \
             \  \"key1\": \"value\",                 \
             \  \"key2\": 101,                       \
-            \  \"key3\": { \"key5\": false },        \
+            \  \"key3\": { \"key5\": false },       \
             \  \"key4\": [                          \
             \     {}, {                             \
             \      \"key6\": false                  \
@@ -205,8 +210,23 @@ tokenizerTests = testGroup "tokenizer tests" [
                   ]
   ]
 
-fileTests :: TestTree 
-fileTests = testGroup "parser tests" []
+
+failTests :: [TestTree]
+failTests = []
+successTests :: [(FilePath, String)] -> [TestTree]
+successTests contents = map (\(file, content) ->  testCase ("file: " ++ file) $ validateJson content @?= Right True ) contents
+
+readFilesFromDirectory :: FilePath -> IO [(FilePath, String)]
+readFilesFromDirectory dir = do 
+    files <- listDirectory dir
+    let fullPaths = map (\file -> dir ++ file) files
+    contents <- sequence $ map (\file -> do 
+        content <- readFileFrom file
+        return (file, content)
+      ) fullPaths
+    return contents
+
+
 
 createExpressionFrom :: String -> Either String Expression
 createExpressionFrom str = ((createTokenizer str) >>= (\tokenizer -> getObjectExpression tokenizer))

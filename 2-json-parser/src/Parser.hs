@@ -37,7 +37,7 @@ parseArrayElements tokenizer = do
 
 parseArrayExpression :: Tokenizer -> Either String (Expression, Tokenizer) 
 parseArrayExpression tokenizer = do
-    t <- eat OpenSquareBracket tokenizer
+    t <- eat OpenSquareBracket tokenizer >>= eat Whitespace
     case lookahead t of 
         Just CloseBracket -> do 
             t2 <- eat CloseSquareBracket t
@@ -49,17 +49,20 @@ parseArrayExpression tokenizer = do
         Nothing -> Left "expected close square bracket"
 
 parsePrimitiveExpression :: Tokenizer -> Either String (Expression, Tokenizer) 
-parsePrimitiveExpression tokenizer = case getNextToken tokenizer of 
-    Just(Token {getTokenType = NumberType, getTokenValue = value }, t) -> 
-        return (NumberExpression { getNumberValue = read(value) }, t)
-    Just(Token {getTokenType = StringType, getTokenValue = value }, t) -> 
-        return (StringExpression $ StringValueExpression { getStringValue = removeLeadingAndTrailingSymbols value }, t)
-    Just(Token {getTokenType = NullType }, t) -> 
-        return (NullExpression, t)
-    Just(Token {getTokenType = BooleanType, getTokenValue = value }, t) -> 
-        return (BooleanExpression { getBooleanValue = value == "true" }, t)
-    Just(Token {getTokenType = t}, _) -> Left $ "other types of values are not supported: " ++ show(t)
-    Nothing -> Left "there are no tokens but expected at least one"
+parsePrimitiveExpression tokenizer = do 
+    (expression, t) <- case getNextToken tokenizer of 
+        Just(Token {getTokenType = NumberType, getTokenValue = value }, t) -> 
+            return (NumberExpression { getNumberValue = read(value) }, t)
+        Just(Token {getTokenType = StringType, getTokenValue = value }, t) -> 
+            return (StringExpression $ StringValueExpression { getStringValue = removeLeadingAndTrailingSymbols value }, t)
+        Just(Token {getTokenType = NullType }, t) -> 
+            return (NullExpression, t)
+        Just(Token {getTokenType = BooleanType, getTokenValue = value }, t) -> 
+            return (BooleanExpression { getBooleanValue = value == "true" }, t)
+        Just(Token {getTokenType = t}, _) -> Left $ "other types of values are not supported: " ++ show(t)
+        Nothing -> Left "there are no tokens but expected at least one"
+    tk <- eat Whitespace t
+    return (expression, tk)
 
 parseExpression :: Tokenizer -> Either String (Expression, Tokenizer)
 parseExpression tokenizer = case lookahead tokenizer of
@@ -121,14 +124,16 @@ getObjectExpression tokenizer = do
     case lookahead t1 of 
         Just OpenBracket -> do
             (e, t2) <- parseObjectExpression tokenizer
-            case getNextToken t2 of 
+            t3 <- eat Whitespace t2
+            case getNextToken t3 of 
                 Nothing -> return e
-                _ -> Left $ "there are more tokens than expected: " ++ show(t2)
+                _ -> Left $ "there are more tokens than expected: " ++ show(t3)
         Just OpenSquareBracket -> do
             (e, t2) <- parseArrayExpression tokenizer
-            case getNextToken t2 of 
+            t3 <- eat Whitespace t2
+            case getNextToken t3 of 
                 Nothing -> return e
-                _ -> Left $ "there are more tokens than expected: " ++ show(t2)
+                _ -> Left $ "there are more tokens than expected: " ++ show(t3)
         Just x -> Left $ "expected { or [ tokens, but not " ++ show (x)
         Nothing -> Left "empty string"
 
