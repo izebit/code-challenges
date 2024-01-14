@@ -5,14 +5,13 @@ import Parser
 import Test.Tasty
 import Test.Tasty.HUnit
 import System.Directory (listDirectory)
-
+import Data.Either
 
 main :: IO ()
 main = do 
-  -- successTestFiles <- readFilesFromDirectory "test-files/success/" 
-  -- let fileTestGroup = testGroup "regression testing" $ failTests ++ (successTests successTestFiles) 
-  let fileTestGroup = testGroup "regression testing" $ []
-  
+  successTestFiles <- readFilesFromDirectory "test-files/success/" 
+  failureTestFiles <- readFilesFromDirectory "test-files/fail/" 
+  let fileTestGroup = testGroup "regression testing" $ (failTests failureTestFiles) ++ (successTests successTestFiles)   
 
   defaultMain $ testGroup "unit tests" [tokenizerTests, parserTests, fileTestGroup]
 
@@ -211,8 +210,8 @@ tokenizerTests = testGroup "tokenizer tests" [
   ]
 
 
-failTests :: [TestTree]
-failTests = []
+failTests :: [(FilePath, String)] -> [TestTree]
+failTests contents = map (\(file, content) ->  testCase ("file: " ++ file) $ assertBool ("invalid json file: "++file) (isLeft $ validateJson content) ) contents
 successTests :: [(FilePath, String)] -> [TestTree]
 successTests contents = map (\(file, content) ->  testCase ("file: " ++ file) $ validateJson content @?= Right True ) contents
 
