@@ -30,7 +30,10 @@ parseArrayElements tokenizer = do
             case lookahead t2 of 
                 Just Comma -> do  
                             (values, t4) <- eat Comma t2 >>= parseArrayElements
-                            return ((value: values), t4)
+                            if null values then
+                                Left "expected array values after , symbol"
+                            else 
+                                return ((value: values), t4)
                 Just _ -> return ([value], t2)
                 Nothing -> Left "there are no tokens!"
         Nothing -> Left "there are no tokens!"
