@@ -211,9 +211,10 @@ tokenizerTests = testGroup "tokenizer tests" [
 
 
 failTests :: [(FilePath, String)] -> [TestTree]
-failTests contents = map (\(file, content) ->  testCase ("file: " ++ file) $ assertBool ("invalid json file: "++file) (isLeft $ validateJson content) ) contents
+failTests contents = map (\(file, content) -> testCase ("file: " ++ file) 
+  $ assertBool ("invalid json file: "++ file ++" is verified as correct") (isLeft $ validateJson content) ) contents
 successTests :: [(FilePath, String)] -> [TestTree]
-successTests contents = map (\(file, content) ->  testCase ("file: " ++ file) $ validateJson content @?= Right True ) contents
+successTests contents = map (\(file, content) -> testCase ("file: " ++ file) $ validateJson content @?= Right True ) contents
 
 readFilesFromDirectory :: FilePath -> IO [(FilePath, String)]
 readFilesFromDirectory dir = do 

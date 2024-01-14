@@ -17,7 +17,7 @@ tokens = [
         ([r|^null|], NullType),
         ([r|^(false|true)|], BooleanType),
         ([r|^-?(0|[1-9][0-9]*)(\.[0-9]*)?([eE][-+]?[0-9]+)?|], NumberType),
-        ([r|^"[^"\\]*(\\.|[^"\\]*)*"|], StringType)
+        ([r|^"(([^[:cntrl:]"\\]|\\[^[:cntrl:]])*)"|], StringType)
     ]
 
 toRegex = makeRegexOpts defaultCompOpt{multiline=False} defaultExecOpt
