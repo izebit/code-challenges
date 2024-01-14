@@ -97,7 +97,10 @@ parseFieldExpressions tokenizer = do
                 Just Comma -> do 
                     t3 <- eat Comma t2
                     (fields, t4) <- parseFieldExpressions t3
-                    return ((field: fields), t4)
+                    if null fields then
+                        Left "after , must be object field, but there is nothing"
+                    else 
+                        return ((field: fields), t4)
                 Just _ -> return ([field], t2)
                 Nothing ->  Left "there are no tokens!"
         Just x -> Left $ "expected string token, but " ++ show(x) ++ " found"
