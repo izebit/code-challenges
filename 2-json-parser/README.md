@@ -7,7 +7,9 @@ It's done as part of [coding challenge #2](https://codingchallenges.substack.com
 ## Usage
 
 ```
-./json-parser ./test-files/success/pass1.json
+✅ ./json-parser ./test-files/success/pass1.json
+❌ ./json-parser ./test-files/fail/fail1.json
+expected { or [ tokens, but not string token
 ```
 
 If json file is valid, the tool returns 0, otherwise it prints error message and exit with code 2.

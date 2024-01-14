@@ -26,8 +26,22 @@ toRegex = makeRegexOpts defaultCompOpt{multiline=False} defaultExecOpt
 (=~+) text pattern = match (toRegex pattern :: Regex) text
 
 data TokenType = OpenBracket | CloseBracket | Whitespace | StringType | Colon | Comma | OpenSquareBracket | CloseSquareBracket | BooleanType | NullType | NumberType
-    deriving (Eq, Show)
+    deriving (Eq)
 data Token = Token { getTokenType::TokenType, getTokenValue::String } deriving (Show, Eq)
+
+instance Show TokenType where 
+    show tokenType = case tokenType of 
+        OpenBracket -> "{ token"
+        CloseBracket -> "} token"
+        Whitespace -> "whitespace token"
+        StringType -> "string token"
+        Colon -> "; token"
+        Comma -> ", token"
+        OpenSquareBracket -> "[ token" 
+        CloseSquareBracket -> "] token"
+        BooleanType -> "boolean token"
+        NullType -> "null token"
+        NumberType -> "number token"
 
 getTokenFrom :: String -> Either String (Maybe (Token, String))
 getTokenFrom str = test tokens str where 
