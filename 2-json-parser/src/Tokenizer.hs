@@ -20,7 +20,9 @@ tokens = [
         ([r|^"([^\\"[:cntrl:]]|\\["\\bfnrt\/]|(\\u[[:xdigit:]]{4}))*"|], StringType)
     ]
 
+toRegex :: String -> Regex
 toRegex = makeRegexOpts defaultCompOpt{multiline=False} defaultExecOpt
+(=~+) :: String -> String -> (String, String, String)
 (=~+) text pattern = match (toRegex pattern :: Regex) text
 
 data TokenType = OpenBracket | CloseBracket | Whitespace | StringType | Colon | Comma | OpenSquareBracket | CloseSquareBracket | BooleanType | NullType | NumberType
@@ -34,7 +36,7 @@ getTokenFrom str = test tokens str where
                 then return Nothing 
                 else Left $ "can't parse token: '" ++ s ++ "'"
     test ((pattern, tokenType) : xs) s = result where 
-          (_, value, rest) = s =~+ pattern :: (String, String, String)
+          (_, value, rest) = s =~+ pattern
           result = if value == "" 
                    then test xs s 
                    else return $ Just (Token {getTokenType = tokenType, getTokenValue = value}, rest)
