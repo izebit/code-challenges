@@ -72,8 +72,8 @@ main = do
     then putStrLn help
     else do 
         inputContent <- getInputContent args
-        let filterFunction | "-d" `elem` args = (> 1)
-                           | "-u" `elem` args = (== 1)
+        let filterFunction | "-d" `elem` args || "--repeated" `elem` args = (> 1)
+                           | "-u" `elem` args || "--unique" `elem` args = (== 1)
                            | otherwise = (>= 1)
         let toString str count = if "-c" `elem` args 
             then (printf "%4d" count) ++ " " ++ str  
