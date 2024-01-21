@@ -1,56 +1,24 @@
 module Main where
 
-import Control.Monad.State
 import System.Environment (getArgs)
 import Data.List (isPrefixOf)
+import Text.Printf (printf)
 
-data UniqState = UniqState { getWord :: String, getCount :: Int, getIsLastLine :: Bool}
-type PrintFunction = UniqState -> UniqState -> IO ()
-type LineCreator = UniqState -> String
-type LineReducer = UniqState -> String -> IO UniqState
+type PrintFunc = Bool -> String -> Int -> IO()
+type FilterFunc = Int -> Bool
 
-getLineReducer :: PrintFunction -> LineReducer
-getLineReducer printFun previous str = do
-    let current = if getWord previous == str 
-        then previous { getCount = getCount previous }
-        else UniqState { getWord = str, 
-                         getCount = 1, 
-                         getIsLastLine = False }
-    _ <- printFun previous current
-    return current
+handleLines :: [String] -> FilterFunc -> PrintFunc -> IO ()
+handleLines [] _ _ = return ()
+handleLines allLines@(currentLine: _) filterFun printFun = do
+    let (prefix, suffix) = span (== currentLine) allLines
+    let isLastLine = null suffix
+    let count = length prefix
 
-handleLines :: PrintFunction -> [String] -> IO ()
-handleLines printFun ls = do
-    let emptyState = UniqState { getWord = "", 
-                                 getCount = 0, 
-                                 getIsLastLine = False }
-    let f = getLineReducer printFun
-    lastState <- foldM f emptyState ls
-    _ <- printFun lastState UniqState { getWord = "", 
-                                        getCount = 0, 
-                                        getIsLastLine = True }
-    return ()
+    if filterFun count
+    then printFun isLastLine currentLine count
+    else return ()
 
-takeIfCount :: Int -> UniqState -> Maybe UniqState
-takeIfCount requiredValue uniqState = 
-    if getCount uniqState == requiredValue 
-    then Just uniqState
-    else Nothing
-
-defaultMode :: UniqState -> UniqState -> Maybe UniqState
-defaultMode _ = takeIfCount 1
-onlyUniq :: UniqState -> UniqState -> Maybe UniqState
-onlyUniq previous current = do
-    if getWord previous == getWord current
-    then Nothing
-    else takeIfCount 1 previous
-onlyRepeated :: UniqState -> UniqState -> Maybe UniqState
-onlyRepeated _ = takeIfCount 2
-
-getLineWithCount :: UniqState -> String
-getLineWithCount uniqState = show(getCount uniqState) ++ " " ++ getWord uniqState
-getLineWithoutCount :: UniqState -> String
-getLineWithoutCount = show . getWord
+    handleLines suffix filterFun printFun 
 
 help :: String 
 help = "NAME                                                                    \n\
@@ -85,18 +53,17 @@ getInputContent args =
     then getContents
     else case getFileName args of 
         Just filePath -> readFile filePath 
-        _ -> fail $ "can't find file name among input parameters: " ++ concat args
+        _ -> fail $ "can't find file name among input parameters: " ++ (concat args)
 
-getPrintFunction :: [String] -> Maybe (Bool -> String -> IO())
+getPrintFunction :: [String] -> Maybe (Bool -> String -> IO ())
 getPrintFunction args = f $ dropWhile ( isPrefixOf "-" ) args where
-    consoleFun isLastLine = if isLastLine then putStr else putStrLn
-    fileFun file isLastLine =  writeFile file
+    consoleFunc isLastLine = if isLastLine then putStr else putStrLn
+    fileFunc file isLastLine = \s -> appendFile file $ if isLastLine then s else s ++ "\n"
 
-    f [] = Just consoleFun
-    f (x: _) | isConsoleInput args  = Just $ fileFun x
-    f (_: []) = Just consoleFun
-    f (_: xs) = fileFun <$> getFileName xs
-
+    f [] = Just $ consoleFunc
+    f (x: _) | isConsoleInput args  = Just $ fileFunc x
+    f (_: []) = Just $ consoleFunc
+    f (_: xs) = fileFunc <$> getFileName xs
 
 main :: IO ()
 main = do 
@@ -105,16 +72,15 @@ main = do
     then putStrLn help
     else do 
         inputContent <- getInputContent args
-        let filterFunction | "-d" `elem` args = onlyRepeated
-                           | "-u" `elem` args = onlyUniq
-                           | otherwise = defaultMode
-        let toString = if "-c" `elem` args 
-            then getLineWithCount 
-            else getLineWithoutCount 
-        let composedFunction p c = toString <$> filterFunction p c
+        let filterFunction | "-d" `elem` args = (> 1)
+                           | "-u" `elem` args = (== 1)
+                           | otherwise = (>= 1)
+        let toString str count = if "-c" `elem` args 
+            then (printf "%4d" count) ++ " " ++ str  
+            else str 
 
         printFunction <- case getPrintFunction args of 
-                Just f -> return (\p c -> forM_ (composedFunction p c) (f $ getIsLastLine c)) 
-                _ -> fail $ "can't detect output type: " ++ concat args
+                Just f -> return (\isLastLine currentLine count -> f isLastLine $ toString currentLine count)
+                _ -> fail $ "can't detect output type: " ++ (concat args)
         
-        handleLines printFunction (lines inputContent) 
+        handleLines (lines inputContent) filterFunction printFunction

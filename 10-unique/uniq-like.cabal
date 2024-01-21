@@ -40,6 +40,7 @@ test-suite unit-test
     ghc-options: -Wall -main-is Tests
     build-depends:
         base ^>=4.19.0.0,
+        mtl ^>=2.2.2,
         HUnit ^>=1.6, 
         tasty,
         tasty-hunit
