@@ -6,7 +6,7 @@ It's done as part of [coding challenge #10](https://codingchallenges.fyi/challen
 
 ## Usage
 
-<img src="https://raw.githubusercontent.com/izebit/coding-challenges/74db0d657f9eacbf50f21d2e6ea518a85ccd70df/1-word-count/demo/demo.gif" alt="gif">
+<img src="https://github.com/izebit/coding-challenges/blob/85ffda83d5529b9fbba8846b321c9e98d9fc2b1a/10-unique/demo/demo.gif" alt="gif">
 <br/>
 <br/>
 
