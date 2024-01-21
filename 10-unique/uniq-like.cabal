@@ -27,3 +27,20 @@ executable uniq-like
         mtl ^>=2.2.2
     hs-source-dirs:   src
     default-language: GHC2021
+
+
+test-suite unit-test
+    type:           exitcode-stdio-1.0
+    hs-source-dirs: 
+        tests,
+        src
+    other-modules:
+        Main
+    main-is: UnitTests.hs
+    ghc-options: -Wall -main-is Tests
+    build-depends:
+        base ^>=4.19.0.0,
+        HUnit ^>=1.6, 
+        tasty,
+        tasty-hunit
+    default-language: GHC2021
