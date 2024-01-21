@@ -26,7 +26,7 @@ help = "NAME                                                                    
         \SYNOPSIS                                                               \n\
         \   uniq-like [ -c | -d | -u | -h ] [ - | input_file ] [output_file]    \n\
         \DESCRIPTION                                                            \n\
-        \   The uniq utility reads the specified input_file comparing adjacent lines, and writes a copy of each unique input line to the output_file.  If input_file is a single dash (‘-’) or absent, the standard input is read.  If output_file is absent, standard output is used for output.  The second and succeeding copies of identical adjacent input lines are not written.  Repeated lines in the input will not be detected if they are not adjacent, so it may be necessary to sort the files first.\n\
+        \   The uniq utility reads the specified input_file comparing adjacent lines, and writes a copy of each unique input line to the output_file. If input_file is a single dash (‘-’) or absent, the standard input is read. If output_file is absent, standard output is used for output. The second and succeeding copies of identical adjacent input lines are not written. Repeated lines in the input will not be detected if they are not adjacent, so it may be necessary to sort the files first.\n\
         \                                                                       \n\
         \   The following options are available:                                \n\
         \   -c, --count                                                         \n\
@@ -68,7 +68,7 @@ getPrintFunction args = f $ dropWhile ( isPrefixOf "-" ) args where
 main :: IO ()
 main = do 
     args <- getArgs 
-    if null args || "-h" `elem` args 
+    if null args || "-h" `elem` args || "--help" `elem` args 
     then putStrLn help
     else do 
         inputContent <- getInputContent args
