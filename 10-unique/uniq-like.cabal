@@ -1,0 +1,29 @@
+cabal-version:      3.4
+name:               uniq-like
+version:            0.1.0.0
+synopsis:           console util alike uniq
+description:        coding challenges #10
+homepage:           https://izebit.ru
+license:            BSD-3-Clause
+license-file:       LICENSE
+author:             Artem Konovalov
+maintainer:         izebit@gmail.com
+-- copyright:
+category:           Text
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+-- extra-source-files:
+
+common warnings
+    ghc-options: -Wall
+
+executable uniq-like
+    import:           warnings
+    main-is:          Main.hs
+    -- other-modules:
+    -- other-extensions:
+    build-depends:    
+        base ^>=4.19.0.0,
+        mtl ^>=2.2.2
+    hs-source-dirs:   src
+    default-language: GHC2021
